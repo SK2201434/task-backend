@@ -22,10 +22,10 @@ const userSchema = mongoose.Schema({
         type: Array,
         default: null,
     },
-    image: {
-        data: Buffer,  
-        contentType: String,
-    },
+    // image: {
+    //     data: Buffer,  
+    //     contentType: String,
+    // },
     friendRequestsIn: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     
     

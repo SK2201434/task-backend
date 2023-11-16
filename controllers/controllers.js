@@ -3,8 +3,8 @@ const User = require("../model/usermodel");
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken')
 const dotenv = require("dotenv").config();
-const multer = require("multer");
-const path = require("path");
+// const multer = require("multer");
+// const path = require("path");
 // const fs = require('fs').promises;
 
 
@@ -17,75 +17,52 @@ const Welcome = (req, res) => {
 
 
 // Multer storage configuration
-const fs = require('fs').promises;
+// const fs = require('fs').promises;
 
 
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, './upload/images'); // specify the destination folder for uploaded files
-    },
-    filename: function (req, file, cb) {
-        // generate a unique filename for the uploaded file
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-    }
-});
+// const storage = multer.diskStorage({
+//     destination: function (req, file, cb) {
+//         cb(null, './upload/images'); // specify the destination folder for uploaded files
+//     },
+//     filename: function (req, file, cb) {
+//         // generate a unique filename for the uploaded file
+//         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+//         cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+//     }
+// });
 
-const upload = multer({ storage: storage });
+// const upload = multer({ storage: storage });
 
 
 
 const registerUser = asyncHandler(async (req, res) => {
-    // Use the 'upload' middleware to handle the file upload
-    upload.single('image')(req, res, async function (err) {
-        if (err) {
-            console.error(err);
-            res.status(500).json({ message: "File upload failed" });
-            return;
-        }
+    const { name, phone, email, password } = req.body;
 
-        const { name, phone, email, password } = req.body;
+    // Check if all required fields are present
+    if (!name || !phone || !email || !password) {
+        res.status(400);
+        throw new Error('All fields are mandatory');
+    }
 
-        // Check if all required fields are present
-        if (!name || !phone || !email || !password) {
-            res.status(400);
-            throw new Error('All fields are mandatory');
-        }
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-        const hashedPassword = await bcrypt.hash(password, 10);
+    const user = {
+        name,
+        phone,
+        email,
+        password: hashedPassword,
+    };
 
-        let user = {
-            name,
-            phone,
-            email,
-            password: hashedPassword,
-        };
+    
+    const createdUser = await User.create(user);
 
-        // Check if there is an uploaded file
-        if (req.file) {
-            // Read the contents of the uploaded file as a buffer
-            const imageBuffer = await fs.readFile(req.file.path);
-
-            // Set the image field with the buffer and content type
-            user.image = {
-                data: imageBuffer,
-                contentType: req.file.mimetype,
-            };
-
-            // Remove the temporary file after processing
-            await fs.unlink(req.file.path);
-        }
-
-        // Create a new user with the image buffer
-        user = await User.create(user);
-
-        if (user) {
-            res.status(201).json({ message: "User Successfully Created" });
-        } else {
-            res.status(400).json({ message: "User not created" });
-        }
-    });
+    if (createdUser) {
+        res.status(201).json({ message: "User Successfully Created" });
+    } else {
+        res.status(400).json({ message: "User not created" });
+    }
 });
+
 
 
 
