@@ -3,14 +3,18 @@ const connectDb = require("./DbConnection/DbConnection");
 const dotenv = require("dotenv").config();
 
 const router = require('./routers/router');
-
-
+const fileUpload = require('express-fileupload');
+const app = express();
 connectDb();
 
-const app = express();
+app.use(fileUpload({
+    useTempFiles:true
+}))
+
 const port = process.env.PORT || 5001;
 
 app.use(express.json());
+
 
 
 

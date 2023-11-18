@@ -22,10 +22,9 @@ const userSchema = mongoose.Schema({
         type: Array,
         default: null,
     },
-    // image: {
-    //     data: Buffer,  
-    //     contentType: String,
-    // },
+    ImagePath:{
+        type:String,
+    },
     friendRequestsIn: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     
     

@@ -3,10 +3,16 @@ const User = require("../model/usermodel");
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken')
 const dotenv = require("dotenv").config();
-// const multer = require("multer");
-// const path = require("path");
-// const fs = require('fs').promises;
-
+const cloudinary = require("cloudinary").v2
+const util = require('util');
+const cloudinaryUpload = util.promisify(cloudinary.uploader.upload);
+// import {v2 as cloudinary} from 'cloudinary';
+          
+cloudinary.config({ 
+  cloud_name: 'dqivc0cjo', 
+  api_key: '744834123871322', 
+  api_secret: '8SbzwigfvVT4tLGVygKXb_IhkBM' 
+});
 
 //@desc Create register user
 //@route POST/api/users
@@ -16,54 +22,49 @@ const Welcome = (req, res) => {
 };
 
 
-// Multer storage configuration
-// const fs = require('fs').promises;
-
-
-// const storage = multer.diskStorage({
-//     destination: function (req, file, cb) {
-//         cb(null, './upload/images'); // specify the destination folder for uploaded files
-//     },
-//     filename: function (req, file, cb) {
-//         // generate a unique filename for the uploaded file
-//         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-//         cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-//     }
-// });
-
-// const upload = multer({ storage: storage });
 
 
 
-const registerUser = asyncHandler(async (req, res) => {
-    const { name, phone, email, password } = req.body;
 
-    // Check if all required fields are present
-    if (!name || !phone || !email || !password) {
-        res.status(400);
-        throw new Error('All fields are mandatory');
-    }
+const registerUser = asyncHandler(async (req, res, next) => {
+    console.log(req.body);
+    const file = req.files.photo;
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    try {
+        const result = await cloudinaryUpload(file.tempFilePath);
 
-    const user = {
-        name,
-        phone,
-        email,
-        password: hashedPassword,
-    };
+        console.log(result);
 
-    
-    const createdUser = await User.create(user);
+        const { name, phone, email, password } = req.body;
 
-    if (createdUser) {
-        res.status(201).json({ message: "User Successfully Created" });
-    } else {
-        res.status(400).json({ message: "User not created" });
+        // Check if all required fields are present
+        if (!name || !phone || !email || !password) {
+            res.status(400);
+            throw new Error('All fields are mandatory');
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const user = {
+            name,
+            phone,
+            email,
+            password: hashedPassword,
+            ImagePath: result.url,
+        };
+
+        const createdUser = await User.create(user);
+
+        if (createdUser) {
+            res.status(201).json({ message: "User Successfully Created" });
+        } else {
+            res.status(400).json({ message: "User not created" });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal Server Error" });
     }
 });
-
-
 
 
 
