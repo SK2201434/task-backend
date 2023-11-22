@@ -243,10 +243,23 @@ const newsfeed = asyncHandler(async (req, res) => {
 //@route POST /api/users/Creat-Posts
 //@access private
 const creatpost = asyncHandler(async (req, res) => {
-    const userId = req.params.id;
+    let token = req.headers.authorization || req.headers.Authorization;
+
+        if (!token) {
+            return res.status(401).json({ message: "Unauthorized: Token not provided" });
+        }
+
+        const SECRETKEY = process.env.SECRETKEY;
+
+        if (token && token.startsWith("Bearer")) {
+            token = token.split(" ")[1];
+            const decoded = jwt.verify(token, SECRETKEY);
+            const userId = decoded.user.id;
+
+    
 
     const file = req.files.photo;
-    console.log(file)
+    
 
     try {
         const result = await cloudinaryUpload(file.tempFilePath);
@@ -281,6 +294,7 @@ const creatpost = asyncHandler(async (req, res) => {
         console.error(error);
         res.status(500).json({ error: "Internal Server Error" });
     }
+}
 });
 
 //@desc PostComments

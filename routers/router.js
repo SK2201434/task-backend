@@ -8,7 +8,7 @@ router.route("/creatusers").post(registerUser);
 router.route("/getFriendRequest").get(getFriendRequests);
 router.route("/AcceptORReject").post(processFriendRequest);
 router.route("/newsfeed").get(newsfeed);
-router.route("/postcreation/:id").post(creatpost);
+router.route("/postcreation").post(creatpost);
 router.route("/comment/:id").post(PostComments);
 router.route("/loggin").post(loggin);
 
