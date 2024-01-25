@@ -1,415 +1,176 @@
 const asyncHandler = require('express-async-handler');
 const User = require('../model/usermodel');
-const Post= require('../model/postmodel');
-const Comment= require('../model/commentmodel');
+const Product = require('../model/productmodel');
 const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken')
-const dotenv = require("dotenv").config();
-const cloudinary = require("cloudinary").v2
-const util = require('util');
-const cloudinaryUpload = util.promisify(cloudinary.uploader.upload);
-const uuid = require('uuid');
+const jwt = require('jsonwebtoken');
+const dotenv = require('dotenv').config();
+const upload = require('../middlewares/multer');
+const tokenblacklist = require('../tokenBlacklist');
 
-//****** cloudinary configuration ******
-          
-cloudinary.config({ 
-  cloud_name: 'dqivc0cjo', 
-  api_key: '744834123871322', 
-  api_secret: '8SbzwigfvVT4tLGVygKXb_IhkBM' 
-});
-
-
-//@desc Home
-//@route POST/api/users
-//@access public
-
+// Welcome route
 const Welcome = (req, res) => {
-    res.send('Hii, Please login to your account! If you are already registered.. or else please register');
+    res.send('Welcome! Please log in to your account or register.');
 };
 
-//@desc Create register user
-//@route POST/api/users
-//@access public
+// Create user
+const registerUser = asyncHandler(async (req, res) => {
+    const { name, phone, email, password } = req.body;
 
-const registerUser = asyncHandler(async (req, res, next) => {
-        
-    try {
-        
-        const { name, phone, email, password } = req.body;
-
-        
-        if (!name || !phone || !email || !password) {
-            res.status(400);
-            throw new Error('All fields are mandatory');
-        }
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        const user = {
-            name,
-            phone,
-            email,
-            password: hashedPassword,
-            
-        };
-
-        const createdUser = await User.create(user);
-
-        if (createdUser) {
-            res.status(201).json({ message: "User Successfully Created" });
-        } else {
-            res.status(400).json({ message: "User not created" });
-        }
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Internal Server Error" });
-    }
-});
-
-//@desc Find all users
-//@route GET /api/users
-//@access public
-const getusers = asyncHandler(async (req, res) => {
-    const page = parseInt(req.query.page) || 1; 
-    const pageSize = parseInt(req.query.pageSize) || 2; 
-    const skip = (page - 1) * pageSize;
-
-    
-    const users = await User.find().select('-password').skip(skip).limit(pageSize);
-
-    res.status(200).json({ users, currentPage: page, pageSize });
-});
-
-
-//@desc Send friend request
-//@route POST /api/users/send-friend-request
-//@access public
-const sendFriendRequest = asyncHandler(async (req, res) => {
-    const { userId, friendId } = req.body;
-
-    if (!userId || !friendId) {
-        res.status(400).json({ message: "Both userId and friendId are required" });
+    if (!name || !phone || !email || !password) {
+        res.status(400).json({ message: 'All fields are mandatory' });
         return;
     }
 
-    try {
-        const userExists = await User.exists({ _id: userId });
-        const friendExists = await User.exists({ _id: friendId });
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-        if (!userExists || !friendExists) {
-            res.status(400).json({ message: "Invalid userId or friendId" });
-            return;
-        }
+    const user = {
+        name,
+        phone,
+        email,
+        password: hashedPassword,
         
-        const updateUser = await User.findByIdAndUpdate(
-            friendId,
-            { $addToSet: { friendRequestsIn: userId } },
-            { new: true }
-        );
-            console.log(updateUser)
-        if (updateUser) {
-           
-            res.status(200).json({ message: "Friend request sent successfully" });
-        } else {
-            res.status(400).json({ message: "Failed to update user" });
-        }
-    } catch (error) {
-        console.error("Error:", error);
-        res.status(500).json({ message: "Internal Server Error" });
+    };
+
+    const createdUser = await User.create(user);
+
+    if (createdUser) {
+        res.status(201).json({ message: 'User successfully created' });
+    } else {
+        res.status(500).json({ message: 'Failed to create user' });
     }
 });
 
-
-//@desc getFriendRequests
-//@route POST /api/users/send-friend-request
-//@access private
-
-const getFriendRequests = asyncHandler(async (req, res) => {
-    let token = req.header('Authorization');
-
-    if (!token) {
-        res.status(401);
-        throw new Error("Authorization token not provided");
-    }
-
-    try {
-        if (token && token.startsWith("Bearer")) {
-            token = token.split(" ")[1];
-            const decoded = jwt.verify(token, process.env.SECRETKEY);
-            const userId = decoded.user.id;
-            console.log(userId)
-            const user = await User.findById(userId).populate('friendRequestsIn');
-
-            if (!user) {
-                res.status(404).json({ message: "User not found" });
-                return;
-            }
-
-            const friendRequests = user.friendRequestsIn.map(request => request._id);
-
-            res.status(200).json({ friendRequests });
-        }
-    } catch (error) {
-        console.error(error);
-        res.status(401).json({ message: "Invalid token" });
-    }
-});
-
-
-
-const processFriendRequest = asyncHandler(async (req, res) => {
-    let token = req.header('Authorization'); 
-    if (!token) {
-        res.status(401);
-        throw new Error("Authorization token not provided");
-    }
-    try {
-        if (token && token.startsWith("Bearer")) {
-            token = token.split(" ")[1];
-            const decoded = jwt.verify(token, process.env.SECRETKEY);
-            const userId = decoded.user.id;
-
-            const { action, friendId } = req.body;
-
-            try {
-                const foundUser = await User.findById(userId);
-
-                if (!foundUser) {
-                    res.status(404).json({ message: "User not found" });
-                    return;
-                }
-
-                const isAlreadyFriend = foundUser.isFriend.includes(friendId);
-                if (isAlreadyFriend) {
-                    res.status(400).json({ message: "Already friends" });
-                    return;
-                }
-
-                if (action === 'accept') {
-                    foundUser.isFriend.push(friendId);
-                    await foundUser.save();
-                }
-
-                foundUser.friendRequestsIn.pull(friendId);
-                await foundUser.save();
-
-                res.status(200).json({ message: "Request Accepted" });
-            } catch (error) {
-                console.error(error);
-                res.status(500).json({ message: "Internal Server Error" });
-            }
-        }
-    } catch (error) {
-        console.error(error);
-        res.status(401).json({ message: "Invalid token" });
-    }
-});
-
-//@desc get newsfeed
-//@route GET /api/users/posts
-//@access public
-const newsfeed = asyncHandler(async (req, res) => {
-    try {
-        const allUsers = await User.find().populate({
-            path: 'posts',
-            populate: {
-                path: 'comments',
-                
-            }
-        }).populate('friendRequestsIn');
-
-        const usersWithPosts = allUsers.map(user => ({
-            name: user.name,
-            posts: user.posts.map(post => ({
-                Image:post.Image,
-                description: post.description,
-                comments: post.comments.map(comment => ({
-                    text: comment.text,
-                    userId: comment.userId ? comment.userId : null,
-                })),
-            })),
-           
-        }));
-
-        res.json(usersWithPosts);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Internal Server Error" });
-    }
-});
-
-
-//@desc CreatPosts
-//@route POST /api/users/Creat-Posts
-//@access private
-const creatpost = asyncHandler(async (req, res) => {
-    let token = req.headers.authorization || req.headers.Authorization;
-
-        if (!token) {
-            return res.status(401).json({ message: "Unauthorized: Token not provided" });
-        }
-
-        const SECRETKEY = process.env.SECRETKEY;
-
-        if (token && token.startsWith("Bearer")) {
-            token = token.split(" ")[1];
-            const decoded = jwt.verify(token, SECRETKEY);
-            const userId = decoded.user.id;
-
-    
-
-    const file = req.files.photo;
-    
-
-    try {
-        const result = await cloudinaryUpload(file.tempFilePath);
-
-        const { description, enum: enumValue } = req.body;
-                
-        const post = {
-            Image: result.url,
-            description,
-            comments: []
-            };
-        
-        const createdPost = await Post.create(post);
-
-        if (createdPost) {
-            
-            const updatedUser = await User.findOneAndUpdate(
-                { _id: userId },
-                { $push: { posts: createdPost._id } },
-                { new: true }
-            );
-
-            if (updatedUser) {
-                res.status(201).json({ message: "Post Successfully Created", post: createdPost });
-            } else {
-                res.status(500).json({ message: "Error updating user's posts array" });
-            }
-        } else {
-            res.status(400).json({ message: "Post not created" });
-        }
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Internal Server Error" });
-    }
-}
-});
-
-//@desc PostComments
-//@route POST /api/users/Creat-Posts
-//@access private
-
-
-const PostComments = asyncHandler(async (req, res) => {
-    const postId = req.params.id;
-
-    try {
-        const { comment } = req.body;
-
-        if (!comment) {
-            return res.status(400).json({ message: "Comment is required" });
-        }
-
-        const post = await Post.findById(postId);
-
-        if (!post) {
-            return res.status(404).json({ message: "Post not found" });
-        }
-
-        if (post.type !== 'unrestricted') {
-            return res.status(400).json({ message: "Comments not allowed" });
-        }
-
-        let token = req.headers.authorization || req.headers.Authorization;
-
-        if (!token) {
-            return res.status(401).json({ message: "Unauthorized: Token not provided" });
-        }
-
-        const SECRETKEY = process.env.SECRETKEY;
-
-        try {
-            if (token && token.startsWith("Bearer")) {
-                token = token.split(" ")[1];
-                const decoded = jwt.verify(token, SECRETKEY);
-                const userId = decoded.user.id;
-
-
-                const createdComment = await Comment.create({ text: comment, userId });
-
-                if (createdComment) {
-                    
-                    const updatedPost = await Post.findByIdAndUpdate(
-                        postId,
-                        { $push: { comments: { text: comment, userId: userId } } },
-                        { new: true }
-                    ).catch(error => {
-                        console.error("Error updating post:", error);
-                        return res.status(500).json({ message: "Error updating post" });
-                    });
-
-                    if (updatedPost) {
-                        return res.status(201).json({ message: "Comment Successfully Created", comment: createdComment });
-                    } else {
-                        return res.status(500).json({ message: "Error updating post's comments array" });
-                    }
-                } else {
-                    return res.status(400).json({ message: "Comment not created" });
-                }
-            } else {
-                res.status(401);
-                throw new Error("User is not authorized");
-            }
-        } catch (error) {
-            console.error(error);
-            return res.status(401).json({ message: "Unauthorized: Invalid token" });
-        }
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({ error: "Internal Server Error" });
-    }
-});
-
-
-//@desc login
-//@route POST/api/login
-//@access public
+// Login
 const loggin = async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-        res.status(400);
-        throw new Error("All Fields Are Mandatory");
+        res.status(400).json({ message: 'All fields are mandatory' });
+        return;
     }
 
-    try {
-        const foundUser = await User.findOne({ email });
+    const foundUser = await User.findOne({ email });
 
-        if (foundUser && (await bcrypt.compare(password, foundUser.password))) {
-            const accessToken = jwt.sign({
+    if (foundUser && (await bcrypt.compare(password, foundUser.password))) {
+        const accessToken = jwt.sign(
+            {
                 user: {
-                    username: foundUser.username,
+                    id: foundUser._id,
                     email: foundUser.email,
-                    id: foundUser.id,
-                }
-            }, process.env.SECRETKEY);
-            const userId = foundUser.id;
+                },
+            },
+            process.env.SECRETKEY
+        );
 
-            res.send(accessToken);
-        } else {
-            res.status(401);
-            throw new Error("Wrong Credentials");
-        }
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Internal Server Error" });
+        res.status(200).json({ accessToken });
+    } else {
+        res.status(401).json({ message: 'Invalid credentials' });
     }
 };
+// Assuming the user ID is in the request object after token validation for all the validation routes
+// Logout
+const tokenBlacklist = new Set();
+const logout = asyncHandler(async (req, res) => {
+    const authHeader = req.header('authorization');
+    
+    if (!authHeader) {
+        return res.status(401).json({ message: 'No token provided' });
+    }
+    
+    const token = authHeader.split(' ')[1];
+
+    try {
+        const decoded = jwt.verify(token, process.env.SECRETKEY, { ignoreExpiration: true });
+
+        tokenblacklist.add(token);
+        res.status(200).json({ message: 'Logout successful' });
+    } catch (error) {
+        console.error('Error verifying token:', error);
+        res.status(401).json({ message: 'Invalid token' });
+    }
+});
 
 
+// Update user profile
+const updateProfile = asyncHandler(async (req, res) => {
+    try {
+        const userId = req.user.id; 
+        const { name, phone } = req.body;
+
+        const updatedUser = await User.findByIdAndUpdate(userId, { name, phone }, { new: true });
+
+        if (updatedUser) {
+            res.status(200).json({ message: 'Profile successfully updated', user: updatedUser });
+        } else {
+            res.status(500).json({ message: 'Failed to update profile' });
+        }
+    } catch (error) {
+        console.error('Error in updateProfile route:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
 
 
+// Create product
+const createProduct = asyncHandler(async (req, res) => {
+    const { name, description, variants } = req.body;
 
-module.exports = { registerUser, getusers, sendFriendRequest,getFriendRequests,processFriendRequest,Welcome,newsfeed,creatpost,PostComments,loggin};
+    const product = {
+        name,
+        description,
+        variants,
+        imageUrl: req.file ? req.file.path : null,
+    };
+
+    const createdProduct = await Product.create(product);
+
+    if (createdProduct) {
+        res.status(201).json({ message: 'Product successfully created', product: createdProduct });
+    } else {
+        res.status(500).json({ message: 'Failed to create product' });
+    }
+});
+
+// Search products
+const searchProducts = asyncHandler(async (req, res) => {
+  
+    const query = req.query.q;
+    console.log(query)
+
+    const products = await Product.find({ name: { $regex: new RegExp(query, 'i') } });
+
+    res.status(200).json({ products });
+});
+
+// Update product
+const updateProduct = asyncHandler(async (req, res) => {
+    const productId = req.params.id; 
+    const { name, description, variants } = req.body;
+
+    const updatedProduct = await Product.findByIdAndUpdate(
+        productId,
+        { name, description, variants },
+        { new: true }
+    );
+
+    if (updatedProduct) {
+        res.status(200).json({ message: 'Product successfully updated', product: updatedProduct });
+    } else {
+        res.status(500).json({ message: 'Failed to update product' });
+    }
+});
+
+// Delete product
+const deleteProduct = asyncHandler(async (req, res) => {
+    const productId = req.params.id;
+
+    const deletedProduct = await Product.findByIdAndDelete(productId);
+
+    if (deletedProduct) {
+        res.status(200).json({ message: 'Product successfully deleted' });
+    } else {
+        res.status(500).json({ message: 'Failed to delete product' });
+    }
+});
+
+module.exports = { Welcome, registerUser, loggin,logout, updateProfile, createProduct, searchProducts, updateProduct, deleteProduct };

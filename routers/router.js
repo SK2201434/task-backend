@@ -1,15 +1,22 @@
 const express = require('express');
 const router = express.Router();
-const { getusers, registerUser, getFriendRequests,processFriendRequest,Welcome,newsfeed,creatpost,PostComments,loggin } = require('../controllers/controllers');
-const valitadeToken = require('../jwttokenhandeler')
-router.route("/").get(Welcome)
-router.route("/getallusers").get(getusers);
+const { Welcome, registerUser, loggin,logout, updateProfile, createProduct, searchProducts, updateProduct, deleteProduct } = require('../controllers/controllers');
+const valitadeToken = require('../middlewares/jwttokenhandeler');
+const upload = require('../middlewares/multer');
+
+// Welcome route
+router.route("/").get(Welcome);
+
+// User routes
 router.route("/creatusers").post(registerUser);
-router.route("/getFriendRequest").get(getFriendRequests);
-router.route("/AcceptORReject").post(processFriendRequest);
-router.route("/newsfeed").get(newsfeed);
-router.route("/postcreation").post(creatpost);
-router.route("/comment/:id").post(PostComments);
 router.route("/loggin").post(loggin);
+router.route("/updateprofile").put(valitadeToken, updateProfile);
+router.route("/logout").post(valitadeToken, logout);
+
+// Product routes
+router.route('/createproduct').post(valitadeToken, upload.single('productImage'), createProduct);
+router.route("/searchproducts").get(valitadeToken, searchProducts);
+router.route("/updateproduct/:id").put(valitadeToken, updateProduct);
+router.route("/deleteproduct/:id").delete(valitadeToken, deleteProduct);
 
 module.exports = router;
