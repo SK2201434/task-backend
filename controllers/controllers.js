@@ -130,6 +130,20 @@ const createProduct = asyncHandler(async (req, res) => {
         res.status(500).json({ message: 'Failed to create product' });
     }
 });
+// get all the products
+const getProducts = asyncHandler(async (req, res) => {
+    
+    const products = await Product.find({});
+
+    if (products) {
+        res.status(200).json({ products });
+    } else {
+        res.status(404).json({ message: 'No products found' });
+    }
+});
+
+
+
 
 // Search products
 const searchProducts = asyncHandler(async (req, res) => {
@@ -173,4 +187,4 @@ const deleteProduct = asyncHandler(async (req, res) => {
     }
 });
 
-module.exports = { Welcome, registerUser, loggin,logout, updateProfile, createProduct, searchProducts, updateProduct, deleteProduct };
+module.exports = { Welcome, registerUser, loggin,logout, updateProfile, createProduct, searchProducts, updateProduct, deleteProduct,getProducts };
