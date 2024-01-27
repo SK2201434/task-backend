@@ -117,7 +117,7 @@ const updateProfile = asyncHandler(async (req, res) => {
 
 // Create product
 const createProduct = asyncHandler(async (req, res) => {
-    const { name, description, variants } = req.body;
+    const { name, description } = req.body;
 
     let imageUrl = null;
     if (req.file) {
@@ -127,7 +127,6 @@ const createProduct = asyncHandler(async (req, res) => {
     const product = {
         name,
         description,
-        variants,
         imageUrl, 
     };
 
