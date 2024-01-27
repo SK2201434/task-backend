@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv').config();
 const upload = require('../middlewares/multer');
 const tokenblacklist = require('../tokenBlacklist');
+const path = require('path');
 
 // Welcome route
 const Welcome = (req, res) => {
@@ -57,16 +58,19 @@ const loggin = async (req, res) => {
                 user: {
                     id: foundUser._id,
                     email: foundUser.email,
+                    name: foundUser.name, // Assuming name is a field in your User model
+                    phone: foundUser.phone, // Assuming phone is a field in your User model
                 },
             },
             process.env.SECRETKEY
         );
 
-        res.status(200).json({ accessToken });
+        res.status(200).json({ accessToken, name: foundUser.name, phone: foundUser.phone, email: foundUser.email });
     } else {
         res.status(401).json({ message: 'Invalid credentials' });
     }
 };
+
 // Assuming the user ID is in the request object after token validation for all the validation routes
 // Logout
 const tokenBlacklist = new Set();
@@ -115,11 +119,16 @@ const updateProfile = asyncHandler(async (req, res) => {
 const createProduct = asyncHandler(async (req, res) => {
     const { name, description, variants } = req.body;
 
+    let imageUrl = null;
+    if (req.file) {
+        imageUrl = path.join('uploads', req.file.filename).replace(/\\/g, '/');
+    }
+
     const product = {
         name,
         description,
         variants,
-        imageUrl: req.file ? req.file.path : null,
+        imageUrl, 
     };
 
     const createdProduct = await Product.create(product);
@@ -130,6 +139,7 @@ const createProduct = asyncHandler(async (req, res) => {
         res.status(500).json({ message: 'Failed to create product' });
     }
 });
+
 // get all the products
 const getProducts = asyncHandler(async (req, res) => {
     
