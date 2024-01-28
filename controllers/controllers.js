@@ -58,14 +58,14 @@ const loggin = async (req, res) => {
                 user: {
                     id: foundUser._id,
                     email: foundUser.email,
-                    name: foundUser.name, // Assuming name is a field in your User model
-                    phone: foundUser.phone, // Assuming phone is a field in your User model
+                    name: foundUser.name, 
+                    phone: foundUser.phone, 
                 },
             },
             process.env.SECRETKEY
         );
 
-        res.status(200).json({ accessToken, name: foundUser.name, phone: foundUser.phone, email: foundUser.email });
+        res.status(200).json({ accessToken, name: foundUser.name, phone: foundUser.phone, email: foundUser.email,id: foundUser._id });
     } else {
         res.status(401).json({ message: 'Invalid credentials' });
     }
@@ -98,7 +98,7 @@ const logout = asyncHandler(async (req, res) => {
 // Update user profile
 const updateProfile = asyncHandler(async (req, res) => {
     try {
-        const userId = req.user.id; 
+        const userId = req.params.userId; 
         const { name, phone } = req.body;
 
         const updatedUser = await User.findByIdAndUpdate(userId, { name, phone }, { new: true });

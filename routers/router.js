@@ -10,7 +10,7 @@ router.route("/").get(Welcome);
 // User routes
 router.route("/creatusers").post(registerUser);
 router.route("/loggin").post(loggin);
-router.route("/updateprofile").put(valitadeToken, updateProfile);
+router.route("/updateprofile/:userId").put(valitadeToken, updateProfile);
 router.route("/logout").post(valitadeToken, logout);
 
 // Product routes
