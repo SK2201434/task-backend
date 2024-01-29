@@ -6,7 +6,11 @@ const { Welcome, registerUser, loggin,logout, updateProfile, createProduct, sear
 const upload = require('../middlewares/multer');
 const cors = require('cors');
 
-app.use(cors());
+app.use(cors(
+    {origin:"https://65b711c2b7d1d8d3d6756e7e--vermillion-otter-0c423c.netlify.app/",
+    methods:"GET,POST,PUT,DELETE,PATCH,HEAD",
+    credential: true,}
+));
 // Welcome route
 router.route("/").get(Welcome);
 
