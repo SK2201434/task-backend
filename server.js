@@ -8,7 +8,7 @@ const app = express();
 connectDb();
 
 const corsOptions = {
-    origin:"https://65b711c2b7d1d8d3d6756e7e--vermillion-otter-0c423c.netlify.app/",
+    origin:"https://65b711c2b7d1d8d3d6756e7e--vermillion-otter-0c423c.netlify.app",
     methods:"GET,POST,PUT,DELETE,PATCH,HEAD",
     credential: true,
 }
