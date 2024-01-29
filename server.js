@@ -16,6 +16,7 @@ app.use(cors(corsOptions))
 
 
 const port = process.env.PORT || 5002;
+console.log(port)
 
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
