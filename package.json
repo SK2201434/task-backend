@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "user have to send friend request",
   "main": "index.js",
+  
   "scripts": {
     "start": "server.js",
     "dev": "nodemon server.js",

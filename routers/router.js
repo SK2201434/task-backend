@@ -1,9 +1,12 @@
 const express = require('express');
 const router = express.Router();
+const app = express()
 const { Welcome, registerUser, loggin,logout, updateProfile, createProduct, searchProducts, updateProduct, deleteProduct,getProducts } = require('../controllers/controllers');
 // const valitadeToken = require('../middlewares/jwttokenhandeler');
 const upload = require('../middlewares/multer');
+const cors = require('cors');
 
+app.use(cors());
 // Welcome route
 router.route("/").get(Welcome);
 
